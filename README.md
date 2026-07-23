@@ -50,6 +50,33 @@ The cluster implementation and exact first-run sequence are staged in
 environment and preflight jobs, then use only the labeled smoke configuration;
 do not jump directly to a full scientific run.
 
+## Current reproduction progress
+
+Last updated: 2026-07-23
+
+Cluster validation is complete for code commit
+`c77baefeea097796b3015e36a7b11e1e71774b67`:
+
+| Stage | Status | Recorded evidence |
+| --- | --- | --- |
+| Repository experiment scaffold | Complete | The pinned configuration, environment setup, preflight checks, unit tests, staged Slurm pipeline, resumable artifact contracts, and runbook are committed. |
+| Isolated cluster environment | Passed | Setup job `8629227` created `/home/zha.j/.conda/envs/rsi-restem`, installed the pinned stack, passed `pip check`, detected an NVIDIA H200 with CUDA 12.8, validated scratch storage, and ended with `Environment ready`. |
+| Explicit cluster preflight | Passed | Job `8635965` ran on host `d4052`. The fail-fast job reached the final successful preflight message, so the preceding unit-test command exited successfully. Imports resolved inside `rsi-restem`, the H200 and CUDA 12.8 were visible, and all required scratch roots were writable. |
+| End-to-end smoke chain | Next | Not yet submitted. This is the next gate and remains infrastructure-only, not a scientific result. |
+| Full ReST-EM study | Not started | Do not launch until the smoke chain and its artifact checks pass. |
+
+The validated cluster artifact root is `/scratch/zha.j/rsi`, with data,
+artifacts, and checkpoints under its corresponding subdirectories. The next
+cluster command is:
+
+```bash
+cd ~/RSI
+bash slurm/submit_chain.sh smoke_gsm8k_3b 2
+```
+
+Record every submitted job ID and follow the monitoring and failure-triage
+instructions in [`docs/experiment_runbook.md`](docs/experiment_runbook.md).
+
 ## What is and is not being reproduced
 
 | Source | Element adopted here | Important difference |
