@@ -39,9 +39,11 @@ Do **not** run any of the following on the local machine:
 
 All experiments—including data preparation that executes project code,
 training, inference, verification at scale, and evaluation—must run on the
-cluster. Cluster environment setup, storage paths, job scheduling, and launch
-commands are intentionally deferred to the next round. Until that discussion,
-no experiment or model job should be launched anywhere.
+cluster. The known Explorer configuration, local-to-cluster Git workflow, and
+VS Code Remote-SSH diagnosis are recorded in
+[`docs/cluster_workflow.md`](docs/cluster_workflow.md). Environment package
+pinning and experiment launch still require cluster-side confirmation; until
+then, no experiment or model job should be launched anywhere.
 
 ## What is and is not being reproduced
 
