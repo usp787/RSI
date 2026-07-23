@@ -42,8 +42,13 @@ training, inference, verification at scale, and evaluation—must run on the
 cluster. The known Explorer configuration, local-to-cluster Git workflow, and
 VS Code Remote-SSH diagnosis are recorded in
 [`docs/cluster_workflow.md`](docs/cluster_workflow.md). Environment package
-pinning and experiment launch still require cluster-side confirmation; until
-then, no experiment or model job should be launched anywhere.
+pins and launch files are prepared locally, but their installation, validation,
+and execution are permitted only through cluster compute-node jobs.
+
+The cluster implementation and exact first-run sequence are staged in
+[`docs/experiment_runbook.md`](docs/experiment_runbook.md). Begin with its
+environment and preflight jobs, then use only the labeled smoke configuration;
+do not jump directly to a full scientific run.
 
 ## What is and is not being reproduced
 
@@ -106,11 +111,11 @@ MATH and then 7B only after generation, verification, SFT, resumption, and
 evaluation artifacts pass the acceptance checks below.
 
 The target cluster resource is one NVIDIA H200. The 3B model is the pipeline
-shake-down target and the 7B model is the scaled confirmation target. Both are
-expected to be practical at this scale, but the usable batch size, context
-length, and full-parameter-versus-PEFT choice depend on the cluster software and
-storage setup. Those execution decisions will be made in the next round; they
-must not be tested locally.
+shake-down target and the 7B model is the scaled confirmation target. The staged
+implementation uses completion-only LoRA SFT followed by a merged checkpoint,
+with a conservative single-H200 configuration. Actual memory, throughput, and
+wall-time fit must be confirmed by the cluster smoke run and must not be tested
+locally.
 
 ### Datasets and split discipline
 
@@ -134,10 +139,10 @@ also be broken down by subject and difficulty when metadata permits.
 ### Implementation stance
 
 There is no assumed modern turnkey ReST-EM repository for this Qwen-based study.
-Implement a thin, auditable pipeline around Hugging Face Transformers/TRL for
-SFT and a cluster inference backend such as vLLM for offline sampling. Reuse
-paper ideas, not an opaque end-to-end codebase. Exact dependency versions and
-the cluster runtime will be pinned after the next-round cluster discussion.
+The repository implements a thin, auditable pipeline around Hugging Face
+Transformers/TRL for SFT and vLLM for offline sampling. It reuses paper ideas,
+not an opaque end-to-end codebase. Exact package, model, and dataset revisions
+are pinned in `requirements.txt` and `configs/restem.yaml`.
 
 ## Primary ReST-EM loop
 
@@ -361,7 +366,8 @@ Planned repository responsibilities are:
 - `src/train_sft.py`: the ReST-EM Improve step;
 - `src/eval_passk.py`: matched 256-sample evaluation and stable estimator;
 - `src/report.py`: tables, confidence intervals, curves, and coverage sets; and
-- `slurm/`: cluster-only job entry points to be designed in the next round.
+- `slurm/`: cluster-only setup, preflight, staged pipeline, and dependency-chain
+  entry points documented in `docs/experiment_runbook.md`.
 
 Raw generations and checkpoints must be immutable and stored outside Git on
 cluster storage. Derived datasets must reference raw sample IDs rather than

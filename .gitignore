@@ -1,0 +1,39 @@
+# Local/editor state
+.vscode/
+.idea/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+
+# Conda/virtual environments and model caches
+.venv/
+venv/
+.cache/
+hf_cache/
+*.safetensors
+*.bin
+*.pt
+checkpoints/
+
+# Cluster-generated data and bulk artifacts
+data/
+artifacts/
+logs/*
+!logs/.gitkeep
+results/*
+!results/.gitkeep
+!results/*.json
+!results/*.csv
+!results/*.png
+
+# Slurm/runtime debris
+slurm-*.out
+slurm-*.err
+*.log
+debug.log
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -434,11 +434,12 @@ unredacted credential files. Explorer support is available through
 3. Prove Git sync, commit verification, `squeue`, and log retrieval with no
    experiment execution.
 4. Repair Remote-SSH with the minimal profile; keep it optional.
-5. Design the isolated `rsi-restem` environment and Slurm scripts.
-6. Run only a cluster preflight job before any model download, inference, or
-   training.
-7. Add small PowerShell helpers for sync, submit, status, and result fetch once
-   the manual SSH commands are confirmed.
+5. Use the isolated `rsi-restem` environment and Slurm scripts now staged in
+   this repository; follow `docs/experiment_runbook.md`.
+6. Run only the cluster preflight job before any model download, inference, or
+   training, followed by the explicitly labeled smoke chain.
+7. Add small PowerShell helpers for sync, status, and result fetch only after
+   the documented manual commands are confirmed.
 
 ## Official references
 

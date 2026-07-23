@@ -1,0 +1,13 @@
+# Known-compatible Explorer stack. Keep the torch/Transformers/TRL/vLLM group
+# together; changing one pin requires a fresh environment and a new preflight.
+torch==2.8.0
+transformers==4.57.6
+trl==0.24.0
+peft==0.17.1
+accelerate==1.10.1
+datasets==4.5.0
+vllm==0.11.0
+math-verify==0.9.0
+PyYAML==6.0.3
+matplotlib==3.10.8
+pillow==12.2.0

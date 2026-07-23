@@ -1,0 +1,184 @@
+version: 1
+
+storage:
+  data_root: ${RSI_ROOT}/data
+  artifact_root: ${RSI_ROOT}/artifacts
+  checkpoint_root: ${RSI_ROOT}/checkpoints
+
+data_defaults:
+  validation_fraction: 0.05
+  split_seed: 20260723
+
+datasets:
+  gsm8k:
+    verifier: gsm8k
+    train_source:
+      hub_id: openai/gsm8k
+      subset: main
+      revision: 740312add88f781978c0658806c59bc2815b9866
+      split: train
+    eval_source:
+      hub_id: openai/gsm8k
+      subset: main
+      revision: 740312add88f781978c0658806c59bc2815b9866
+      split: test
+    fields:
+      problem: question
+      solution: answer
+    prompt:
+      train_few_shot: true
+      eval_few_shot: false
+
+  math:
+    verifier: math
+    train_source:
+      hub_id: DigitalLearningGmbH/MATH-lighteval
+      subset: default
+      revision: 0530c78699ea5e8eb5530600900e1f328b48acad
+      split: train
+    eval_source:
+      hub_id: HuggingFaceH4/MATH-500
+      subset: null
+      revision: 6e4ed1a2a79af7d8630a6b768ec859cb5af4d3be
+      split: test
+    fields:
+      problem: problem
+      solution: solution
+      answer: answer
+      subject: subject
+      fallback_subject: type
+      level: level
+    prompt:
+      train_few_shot: true
+      eval_few_shot: false
+
+models:
+  qwen25_3b:
+    base_id: Qwen/Qwen2.5-3B
+    revision: 3aab1f1954e9cc14eb9509a215f9e5ca08227a9b
+    dtype: bfloat16
+    tensor_parallel_size: 1
+    gpu_memory_utilization: 0.90
+    max_model_len: 4096
+
+  qwen25_7b:
+    base_id: Qwen/Qwen2.5-7B
+    revision: d149729398750b98c0af14eb82c78cfe92750796
+    dtype: bfloat16
+    tensor_parallel_size: 1
+    gpu_memory_utilization: 0.90
+    max_model_len: 4096
+
+defaults:
+  mode: full
+  rounds: 3
+  seed: 20260723
+  max_train_problems: null
+  max_eval_problems: null
+  generation:
+    request_batch_size: 8
+    train:
+      request_batch_size: 8
+      samples_per_problem: 16
+      temperature: 0.7
+      top_p: 1.0
+      top_k: 40
+      max_tokens: 2048
+    eval:
+      request_batch_size: 1
+      samples_per_problem: 256
+      temperature: 0.6
+      top_p: 0.95
+      top_k: -1
+      max_tokens: 2048
+  filter:
+    max_accepted_per_problem: 10
+    verifier_timeout_seconds: 10
+    deduplicate_completions: true
+  sft:
+    max_length: 4096
+    learning_rate: 0.00002
+    num_train_epochs: 2
+    max_steps: -1
+    per_device_train_batch_size: 2
+    per_device_eval_batch_size: 2
+    gradient_accumulation_steps: 16
+    gradient_checkpointing: true
+    packing: false
+    logging_steps: 5
+    eval_steps: 50
+    save_steps: 50
+    save_total_limit: 2
+    warmup_ratio: 0.03
+    weight_decay: 0.0
+    bf16: true
+    tf32: true
+    lora:
+      r: 64
+      lora_alpha: 128
+      lora_dropout: 0.05
+      bias: none
+      target_modules:
+        - q_proj
+        - k_proj
+        - v_proj
+        - o_proj
+        - gate_proj
+        - up_proj
+        - down_proj
+  report:
+    bootstrap_replicates: 2000
+    bootstrap_seed: 20260724
+    emphasized_k: [1, 2, 4, 8, 16, 32, 64, 128, 256]
+
+experiments:
+  smoke_gsm8k_3b:
+    dataset_key: gsm8k
+    model_key: qwen25_3b
+    mode: smoke
+    rounds: 1
+    max_train_problems: 64
+    max_eval_problems: 16
+    generation:
+      request_batch_size: 4
+      train:
+        request_batch_size: 4
+        samples_per_problem: 2
+        max_tokens: 256
+      eval:
+        request_batch_size: 2
+        samples_per_problem: 8
+        max_tokens: 256
+    sft:
+      max_length: 512
+      max_steps: 2
+      gradient_accumulation_steps: 2
+      logging_steps: 1
+      eval_steps: 1
+      save_steps: 1
+      save_total_limit: 1
+    report:
+      bootstrap_replicates: 200
+      emphasized_k: [1, 2, 4, 8]
+
+  restem_gsm8k_3b:
+    dataset_key: gsm8k
+    model_key: qwen25_3b
+
+  restem_math_3b:
+    dataset_key: math
+    model_key: qwen25_3b
+    generation:
+      train:
+        samples_per_problem: 32
+
+  restem_gsm8k_7b:
+    dataset_key: gsm8k
+    model_key: qwen25_7b
+
+  restem_math_7b:
+    dataset_key: math
+    model_key: qwen25_7b
+    generation:
+      train:
+        samples_per_problem: 32
