@@ -5,10 +5,37 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 from pathlib import Path
 from typing import Any
 
-from common import atomic_write_json, canonical_sha256, experiment_dir, iter_jsonl, load_experiment
+from common import (
+    atomic_write_json,
+    canonical_sha256,
+    experiment_dir,
+    iter_jsonl,
+    load_experiment,
+    provenance,
+)
+
+
+def declared_rounds(configured_final_round: int, submitted_final_round: int) -> list[int]:
+    """Return every declared model round and reject truncated reports."""
+    if submitted_final_round != configured_final_round:
+        raise ValueError(
+            "Report final round must exactly match the experiment configuration: "
+            f"submitted={submitted_final_round}, configured={configured_final_round}"
+        )
+    return list(range(configured_final_round + 1))
+
+
+def validate_output_name(output_name: str) -> str:
+    """Keep report recovery outputs inside the experiment artifact directory."""
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", output_name):
+        raise ValueError(
+            "--output-name must be one safe directory name using letters, numbers, '.', '_', or '-'"
+        )
+    return output_name
 
 
 def _bootstrap_curves(matrix, replicates: int, seed: int, batch_size: int = 200):
@@ -31,15 +58,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="configs/restem.yaml")
     parser.add_argument("--experiment", required=True)
-    parser.add_argument("--rounds", required=True, help="comma-separated model rounds, including 0")
+    parser.add_argument("--final-round", type=int, required=True)
+    parser.add_argument(
+        "--output-name",
+        default="report",
+        help="safe output directory name under the experiment artifact directory",
+    )
     args = parser.parse_args()
 
     config = load_experiment(args.config, args.experiment)
-    rounds = [int(value) for value in args.rounds.split(",")]
-    if not rounds or rounds[0] != 0 or rounds != sorted(set(rounds)):
-        raise ValueError("--rounds must be unique, sorted, and start with 0")
-    if rounds[-1] > config["rounds"]:
-        raise ValueError(f"Requested M{rounds[-1]} but config stops at M{config['rounds']}")
+    rounds = declared_rounds(int(config["rounds"]), args.final_round)
+    output_name = validate_output_name(args.output_name)
 
     import matplotlib
 
@@ -49,6 +78,7 @@ def main() -> None:
 
     rows_by_round: dict[int, dict[str, dict[str, Any]]] = {}
     score_contracts: dict[int, str] = {}
+    score_code_commits: dict[int, str] = {}
     for model_round in rounds:
         directory = experiment_dir(config) / "eval" / f"m{model_round}"
         success_path = directory / "_SUCCESS.json"
@@ -57,8 +87,13 @@ def main() -> None:
             raise FileNotFoundError(f"M{model_round} evaluation is incomplete: {directory}")
         success = json.loads(success_path.read_text(encoding="utf-8"))
         score_contracts[model_round] = success["score_contract_sha256"]
+        score_code_commits[model_round] = success["code_commit"]
         round_rows = {row["problem_id"]: row for row in iter_jsonl(per_problem_path)}
         rows_by_round[model_round] = round_rows
+
+    source_code_commits = set(score_code_commits.values())
+    if len(source_code_commits) != 1:
+        raise ValueError(f"Evaluation scores were produced by mixed code commits: {score_code_commits}")
 
     base_ids = set(rows_by_round[0])
     for model_round, round_rows in rows_by_round.items():
@@ -162,12 +197,13 @@ def main() -> None:
                 },
             }
 
-    output_dir = experiment_dir(config) / "report"
+    output_dir = experiment_dir(config) / output_name
     output_dir.mkdir(parents=True, exist_ok=True)
     report_contract = {
-        "experiment": args.experiment,
+        **provenance(config),
         "rounds": rounds,
         "score_contracts": score_contracts,
+        "source_score_code_commit": source_code_commits.pop(),
         "report": report_config,
     }
     contract_hash = canonical_sha256(report_contract)

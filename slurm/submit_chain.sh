@@ -72,9 +72,8 @@ for ((model_round=0; model_round<=ROUNDS; model_round++)); do
   fi
 done
 
-round_list=$(seq -s, 0 "$ROUNDS")
 dependency=$(IFS=:; echo "${score_jobs[*]}")
 report_job=$(submit --dependency="afterok:$dependency" \
-  --export="$export_vars,ROUNDS=$round_list" slurm/21_report.sbatch)
+  --export="$export_vars,FINAL_ROUND=$ROUNDS" slurm/21_report.sbatch)
 echo "report=$report_job"
 echo "submitted experiment=$EXPERIMENT mode=$MODE commit=$CODE_COMMIT"

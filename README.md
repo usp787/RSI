@@ -54,28 +54,27 @@ do not jump directly to a full scientific run.
 
 Last updated: 2026-07-23
 
-Cluster validation is complete for code commit
-`c77baefeea097796b3015e36a7b11e1e71774b67`:
+Environment and preflight validation completed at commit
+`c77baefeea097796b3015e36a7b11e1e71774b67`. The first smoke chain ran at
+commit `784d8849000d24aec207eb7d924c2f9ff6a73445`:
 
 | Stage | Status | Recorded evidence |
 | --- | --- | --- |
 | Repository experiment scaffold | Complete | The pinned configuration, environment setup, preflight checks, unit tests, staged Slurm pipeline, resumable artifact contracts, and runbook are committed. |
 | Isolated cluster environment | Passed | Setup job `8629227` created `/home/zha.j/.conda/envs/rsi-restem`, installed the pinned stack, passed `pip check`, detected an NVIDIA H200 with CUDA 12.8, validated scratch storage, and ended with `Environment ready`. |
 | Explicit cluster preflight | Passed | Job `8635965` ran on host `d4052`. The fail-fast job reached the final successful preflight message, so the preceding unit-test command exited successfully. Imports resolved inside `rsi-restem`, the H200 and CUDA 12.8 were visible, and all required scratch roots were writable. |
-| End-to-end smoke chain | Next | Not yet submitted. This is the next gate and remains infrastructure-only, not a scientific result. |
+| Smoke compute stages | Passed | Jobs `8636989` through `8636996` completed with exit code `0:0`. The chain produced pinned data, M0 and M1 evaluation scores, 56 retained SFT samples from 128 generations, and an M1 checkpoint after the declared two optimizer steps. |
+| Matched smoke report | Repair required | Report job `8636997` exited successfully but received only round 0 because a comma-separated value was truncated by Slurm's `--export` parsing. Its report is intentionally retained as incomplete. The launcher now exports a scalar final round, and the reporter rejects any truncated round set. |
 | Full ReST-EM study | Not started | Do not launch until the smoke chain and its artifact checks pass. |
 
 The validated cluster artifact root is `/scratch/zha.j/rsi`, with data,
-artifacts, and checkpoints under its corresponding subdirectories. The next
-cluster command is:
+artifacts, and checkpoints under its corresponding subdirectories. After
+committing, syncing, and passing preflight for the report fix, the next cluster
+command is the CPU-only report repair documented in the runbook. Do not rerun
+the full smoke chain and do not launch a full study yet.
 
-```bash
-cd ~/RSI
-bash slurm/submit_chain.sh smoke_gsm8k_3b 2
-```
-
-Record every submitted job ID and follow the monitoring and failure-triage
-instructions in [`docs/experiment_runbook.md`](docs/experiment_runbook.md).
+Follow the recovery and validation instructions in
+[`docs/experiment_runbook.md`](docs/experiment_runbook.md).
 
 ## What is and is not being reproduced
 

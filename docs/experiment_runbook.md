@@ -164,6 +164,30 @@ sed -n '1,220p' "/scratch/$USER/rsi/artifacts/smoke_gsm8k_3b/report/summary.json
 
 The report must contain the warning that smoke output is infrastructure-only.
 
+The report must also list every configured model round. For
+`smoke_gsm8k_3b`, require `rounds: [0, 1]`, curves for both `M0` and `M1`, and
+an `M1_vs_M0` coverage set. A report containing only M0 is incomplete even if
+its Slurm job exited successfully.
+
+### Recovery from an incomplete immutable smoke report
+
+An earlier launcher may have passed a comma-separated round list through
+Slurm's comma-delimited `--export` syntax, causing the report job to see only
+round 0. Preserve that incomplete report and write the repaired M0/M1 report to
+a new directory after syncing the fix and passing preflight:
+
+```bash
+cd ~/RSI
+commit=$(git rev-parse HEAD)
+sbatch --export=ALL,CODE_COMMIT="$commit",CONFIG=configs/restem.yaml,EXPERIMENT=smoke_gsm8k_3b,FINAL_ROUND=1,REPORT_NAME=report_m0_m1 \
+  slurm/21_report.sbatch
+```
+
+This CPU-only repair reuses the completed M0 and M1 score artifacts. It does
+not rerun data preparation, generation, filtering, or training. The repaired
+report records both its current reporting-code commit and the source scoring
+commit. Do not delete or overwrite the original report directory.
+
 ## Resume and failure behavior
 
 - Generation appends only missing deterministic sample IDs and writes a success
@@ -177,7 +201,9 @@ The report must contain the warning that smoke output is infrastructure-only.
   from running on incomplete artifacts.
 - A config or code change should be committed and launched as a new experiment
   identity or under a new `RSI_ROOT`. Do not mix contracts in an old artifact
-  directory.
+  directory. The explicitly documented report repair is the sole exception: it
+  reads immutable score artifacts and writes a separately named derived report
+  with both code lineages recorded.
 
 For any failure, preserve the job ID, first fatal log line, commit SHA, config
 name, and relevant `_SUCCESS.json`/`.meta.json` records.

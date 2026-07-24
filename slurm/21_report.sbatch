@@ -11,6 +11,8 @@
 
 source slurm/common.sh
 : "${EXPERIMENT:?missing EXPERIMENT}"
-: "${ROUNDS:?missing ROUNDS}"
+: "${FINAL_ROUND:?missing FINAL_ROUND}"
+REPORT_NAME="${REPORT_NAME:-report}"
 python src/report.py --config "${CONFIG:-configs/restem.yaml}" \
-  --experiment "$EXPERIMENT" --rounds "$ROUNDS"
+  --experiment "$EXPERIMENT" --final-round "$FINAL_ROUND" \
+  --output-name "$REPORT_NAME"
