@@ -210,18 +210,49 @@ name, and relevant `_SUCCESS.json`/`.meta.json` records.
 
 ## Moving from smoke to the first full run
 
-After the smoke report is complete and internally consistent, the first
-scientific launch is:
+After the smoke report is complete and internally consistent, calibrate the
+full evaluation workload before submitting the scientific chain. The smoke
+evaluation assigned only 8 problems x 8 samples to each of two shards, whereas
+an eight-shard full evaluation would assign about 165 problems x 256 samples to
+each shard with a larger token limit. Eight shards are therefore a placeholder,
+not a validated launch choice.
+
+Use a separate scratch root so a calibration with one candidate shard count
+cannot contaminate the immutable full-run artifacts. This submits data
+preparation followed by only shard 0 of a hypothetical 256-shard M0 evaluation:
 
 ```bash
-bash slurm/submit_chain.sh restem_gsm8k_3b 8
+cd ~/RSI
+commit=$(git rev-parse HEAD)
+calibration_root="/scratch/$USER/rsi-calibration-gsm8k-3b"
+shared_hf_home="/scratch/$USER/rsi/hf_cache"
+
+data_job=$(sbatch --parsable \
+  --export=ALL,CODE_COMMIT="$commit",CONFIG=configs/restem.yaml,EXPERIMENT=restem_gsm8k_3b,RSI_ROOT="$calibration_root",HF_HOME="$shared_hf_home" \
+  slurm/01_prepare_data.sbatch)
+data_job=${data_job%%;*}
+
+calibration_job=$(sbatch --parsable --dependency="afterok:$data_job" --array=0-0 \
+  --export=ALL,CODE_COMMIT="$commit",CONFIG=configs/restem.yaml,EXPERIMENT=restem_gsm8k_3b,RSI_ROOT="$calibration_root",HF_HOME="$shared_hf_home",PHASE=eval,ROUND=0,SHARD_COUNT=256 \
+  slurm/10_generate.sbatch)
+calibration_job=${calibration_job%%;*}
+
+echo "data=$data_job calibration=$calibration_job"
 ```
 
-Before submitting it, inspect queue limits and estimate whether each generation
-shard can finish within eight hours. Increase the shard count if needed; do not
-change sampling count, temperature, prompt, verifier, or token limit based on
-test performance. The full configuration evaluates exactly 256 samples per
-problem and runs three declared iterations.
+The calibration uses the exact full M0 evaluation sampling contract but writes
+outside the scientific artifact root. After it completes, record its elapsed
+time, maximum RSS, generated sample count, output-token statistics from the log,
+and whether it approached the eight-hour limit. Select the smallest shard count
+that leaves a conservative wall-time margin, then launch:
+
+```bash
+bash slurm/submit_chain.sh restem_gsm8k_3b <validated-shard-count>
+```
+
+Do not change sampling count, temperature, prompt, verifier, or token limit
+based on test performance. The full configuration evaluates exactly 256
+samples per problem and runs three declared iterations.
 
 MATH should follow GSM8K 3B, and 7B should follow successful 3B artifact and
 resume checks. The full configurations are starting points whose batch/resource
