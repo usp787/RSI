@@ -65,14 +65,14 @@ commit `784d8849000d24aec207eb7d924c2f9ff6a73445`:
 | Explicit cluster preflight | Passed | Job `8635965` ran on host `d4052`. The fail-fast job reached the final successful preflight message, so the preceding unit-test command exited successfully. Imports resolved inside `rsi-restem`, the H200 and CUDA 12.8 were visible, and all required scratch roots were writable. |
 | Smoke compute stages | Passed | Jobs `8636989` through `8636996` completed with exit code `0:0`. The chain produced pinned data, M0 and M1 evaluation scores, 56 retained SFT samples from 128 generations, and an M1 checkpoint after the declared two optimizer steps. |
 | Matched smoke report | Passed after repair | The immutable repaired report at `report_m0_m1/` was produced by commit `ad85be3ae95897e6b07807e48a4ea11af9dc2680`. It contains rounds M0 and M1, matched 8-sample curves on 16 problems, both score contracts, an `M1_vs_M0` coverage partition, and the required smoke-only warning. The original M0-only report remains preserved as incomplete. |
-| Full-run timing calibration | Next | Before selecting a shard count, time one isolated full-configuration M0 evaluation shard under a separate calibration root. The smoke workload is too small to justify the runbook's original eight-shard placeholder safely. |
-| Full ReST-EM study | Not started | Do not launch until the timing calibration establishes a shard count with a conservative eight-hour margin. |
+| Full-run timing calibration | Passed | Job `8642244` at commit `4e53123087480a5d7da6cec08a83dc449d52b77e` completed 1,536/1,536 samples for six full-contract evaluation problems in 2 minutes 15 seconds. The raw shard was 2,262,955 bytes and peak host RSS was about 8.8 GiB. |
+| Full ReST-EM study | Ready to submit | Four serialized shards are the validated starting count. This projects about 43 minutes per evaluation shard from the calibration, while retaining substantial margin for longer outputs and later checkpoints under the eight-hour limit. |
 
 The validated cluster artifact root is `/scratch/zha.j/rsi`, with data,
 artifacts, and checkpoints under its corresponding subdirectories. The smoke
-gate is complete. The next cluster action is the isolated sizing calibration
-documented in the runbook; do not launch the full study with an unmeasured shard
-count.
+and timing-calibration gates are complete. After syncing a clean checkout, the
+next cluster action is `bash slurm/submit_chain.sh restem_gsm8k_3b 4`, as
+documented in the runbook.
 
 Follow the recovery and validation instructions in
 [`docs/experiment_runbook.md`](docs/experiment_runbook.md).

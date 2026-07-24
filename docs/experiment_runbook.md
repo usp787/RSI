@@ -243,11 +243,29 @@ echo "data=$data_job calibration=$calibration_job"
 The calibration uses the exact full M0 evaluation sampling contract but writes
 outside the scientific artifact root. After it completes, record its elapsed
 time, maximum RSS, generated sample count, output-token statistics from the log,
-and whether it approached the eight-hour limit. Select the smallest shard count
-that leaves a conservative wall-time margin, then launch:
+and whether it approached the eight-hour limit.
+
+The recorded Explorer calibration at commit
+`4e53123087480a5d7da6cec08a83dc449d52b77e` completed 1,536/1,536 samples for
+six problems in 2 minutes 15 seconds. Its raw JSONL was 2,262,955 bytes and its
+peak host RSS was approximately 8.8 GiB. About 90 seconds were fixed model-load
+and compilation overhead, leaving roughly 45 seconds for generation. Scaling
+that observed generation time to four shards gives approximately 43 minutes per
+full evaluation shard; even a threefold slowdown remains far below the
+eight-hour limit. Four shards also avoid the repeated loading and queue overhead
+of the original eight-shard placeholder.
+
+The calibration file size projects to roughly 0.50 GB of raw generations per
+full evaluation round, or about 2.0 GB across M0 through M3. Training raw data,
+score artifacts, checkpoints, and caches require additional space and must be
+retained according to the artifact contract.
+
+The validated first scientific launch is therefore:
 
 ```bash
-bash slurm/submit_chain.sh restem_gsm8k_3b <validated-shard-count>
+cd ~/RSI
+git status --short  # must be empty
+bash slurm/submit_chain.sh restem_gsm8k_3b 4
 ```
 
 Do not change sampling count, temperature, prompt, verifier, or token limit
