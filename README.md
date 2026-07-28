@@ -52,7 +52,7 @@ do not jump directly to a full scientific run.
 
 ## Current reproduction progress
 
-Last updated: 2026-07-23
+Last updated: 2026-07-27
 
 Environment and preflight validation completed at commit
 `c77baefeea097796b3015e36a7b11e1e71774b67`. The first smoke chain ran at
@@ -66,16 +66,81 @@ commit `784d8849000d24aec207eb7d924c2f9ff6a73445`:
 | Smoke compute stages | Passed | Jobs `8636989` through `8636996` completed with exit code `0:0`. The chain produced pinned data, M0 and M1 evaluation scores, 56 retained SFT samples from 128 generations, and an M1 checkpoint after the declared two optimizer steps. |
 | Matched smoke report | Passed after repair | The immutable repaired report at `report_m0_m1/` was produced by commit `ad85be3ae95897e6b07807e48a4ea11af9dc2680`. It contains rounds M0 and M1, matched 8-sample curves on 16 problems, both score contracts, an `M1_vs_M0` coverage partition, and the required smoke-only warning. The original M0-only report remains preserved as incomplete. |
 | Full-run timing calibration | Passed | Job `8642244` at commit `4e53123087480a5d7da6cec08a83dc449d52b77e` completed 1,536/1,536 samples for six full-contract evaluation problems in 2 minutes 15 seconds. The raw shard was 2,262,955 bytes and peak host RSS was about 8.8 GiB. |
-| Full ReST-EM study | Ready to submit | Four serialized shards are the validated starting count. This projects about 43 minutes per evaluation shard from the calibration, while retaining substantial margin for longer outputs and later checkpoints under the eight-hour limit. |
+| Full ReST-EM GSM8K/Qwen2.5-3B loop | Passed | M0 through M3 generation, correctness filtering, reset-to-M0 LoRA SFT, matched evaluation, and scoring completed at experiment commit `d2e8fd134afaad2754f3f2da6ad5b13c77a2f026`. M3 evaluation array job `8779606` and score job `8779607` completed with exit code `0:0`. |
+| Final matched M0–M3 report | Passed | The report covers all 1,319 GSM8K test problems with 256 samples per problem and paired bootstrap intervals. `summary.json` and `_SUCCESS.json` have the identical SHA-256 `00f1e2f14d2a2a75c833bbf973ebda29fb281574eed71aa23f9d95ce91af8223`. |
 
 The validated cluster artifact root is `/scratch/zha.j/rsi`, with data,
-artifacts, and checkpoints under its corresponding subdirectories. The smoke
-and timing-calibration gates are complete. After syncing a clean checkout, the
-next cluster action is `bash slurm/submit_chain.sh restem_gsm8k_3b 4`, as
-documented in the runbook.
+artifacts, and checkpoints under its corresponding subdirectories. The completed
+full report is at
+`/scratch/zha.j/rsi/artifacts/restem_gsm8k_3b/report`. The single-seed
+GSM8K/Qwen2.5-3B run is complete; no additional cluster job is prescribed here.
+Future work will be selected in a separate discussion.
 
 Follow the recovery and validation instructions in
 [`docs/experiment_runbook.md`](docs/experiment_runbook.md).
+
+### Completed GSM8K/Qwen2.5-3B result
+
+The primary run used the untouched `Qwen/Qwen2.5-3B` checkpoint as M0 and
+produced M1, M2, and M3 through three declared ReST-EM rounds. Every improved
+model was trained with the registered `restem-reset-to-m0` algorithm rather
+than warm-starting from the preceding round. Evaluation used one matched
+zero-shot harness on the 1,319-problem GSM8K test manifest, with 256 samples per
+problem, temperature `0.6`, top-p `0.95`, and a maximum of 2,048 generated
+tokens. The following percentages are copied from the immutable final report;
+the cluster artifacts retain full precision and confidence intervals.
+
+Low-`k` results:
+
+| Model | pass@1 | pass@2 | pass@4 | pass@8 |
+| --- | ---: | ---: | ---: | ---: |
+| M0 | 69.5173% | 83.4174% | 90.8410% | 94.6582% |
+| M1 | 72.7635% | 84.9243% | 91.3302% | 94.6956% |
+| M2 | **75.0643%** | **86.1506%** | **91.8929%** | **94.9662%** |
+| M3 | 74.4237% | 85.7346% | 91.6428% | 94.8005% |
+
+High-`k` results and sampled coverage:
+
+| Model | pass@16 | pass@32 | pass@64 | pass@128 | pass@256 | Solved at least once |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| M0 | **96.8667%** | **98.2202%** | **99.0442%** | **99.4806%** | **99.6967%** | **1,315/1,319** |
+| M1 | 96.6850% | 97.9246% | 98.7441% | 99.3131% | 99.6209% | 1,314/1,319 |
+| M2 | 96.8081% | 97.9803% | 98.7746% | 99.3012% | 99.5451% | 1,313/1,319 |
+| M3 | 96.6722% | 97.8719% | 98.6957% | 99.2400% | 99.5451% | 1,313/1,319 |
+
+The paired difference intervals give the same picture as the point estimates.
+Relative to M0, M2 is significantly positive through `k = 8`, statistically
+indistinguishable at `k = 16`, and significantly negative at `k = 32`, `64`,
+and `128`. M3 improves `pass@1` through `pass@4`, is indistinguishable from M0
+at `k = 8` and `16`, and is significantly below M0 at `k = 32`, `64`, and
+`128`. At `k = 256`, the point estimates are below M0 but the paired 95%
+intervals include zero at their boundary.
+
+The report's exact per-problem coverage partitions are:
+
+| Comparison | Solved by both | Iterated only | M0 only | Solved by neither |
+| --- | ---: | ---: | ---: | ---: |
+| M1 vs. M0 | 1,314 | 0 | 1 | 4 |
+| M2 vs. M0 | 1,313 | 0 | 2 | 4 |
+| M3 vs. M0 | 1,313 | 0 | 2 | 4 |
+
+No iterated checkpoint solved any held-out problem that M0 failed to solve at
+least once within the matched 256-sample budget. M1 lost one rare M0 success;
+M2 and M3 each lost two, while the same four problems remained unsolved by all
+models. M2 is the best checkpoint for one or a few samples. M3 is below M2 for
+every emphasized `k` from 1 through 128 and tied with it at 256, so the third
+round provides no observed benefit.
+
+For this single-seed Qwen2.5-3B/GSM8K condition, the result supports H1
+(reweighting/elicitation) together with H3 (plateau or contraction), not H2
+(expanded sampled coverage). ReST-EM made correct solutions already sampled by
+M0 more likely to appear in the first few attempts, but it did not expand
+observed problem coverage and slightly reduced the rare-solution tail. This is
+an improvement in sampling efficiency, not evidence of a new reasoning
+capability. The conclusion is deliberately limited to this prompt, verifier,
+decoding distribution, 256-sample budget, dataset, model, and training seed;
+failure within 256 samples does not prove zero probability, and replication is
+required before treating small coverage differences as stable.
 
 ## What is and is not being reproduced
 
