@@ -165,6 +165,14 @@ experiments:
     dataset_key: gsm8k
     model_key: qwen25_3b
 
+  # Evaluation-only replication of the completed restem_gsm8k_3b checkpoints.
+  # Keep this identity separate so fresh samples cannot collide with the
+  # immutable primary-run artifacts.
+  restem_gsm8k_3b_eval_seed_20260806:
+    dataset_key: gsm8k
+    model_key: qwen25_3b
+    seed: 20260806
+
   restem_math_3b:
     dataset_key: math
     model_key: qwen25_3b
