@@ -52,7 +52,7 @@ do not jump directly to a full scientific run.
 
 ## Current reproduction progress
 
-Last updated: 2026-07-27
+Last updated: 2026-08-06
 
 Environment and preflight validation completed at commit
 `c77baefeea097796b3015e36a7b11e1e71774b67`. The first smoke chain ran at
@@ -68,13 +68,17 @@ commit `784d8849000d24aec207eb7d924c2f9ff6a73445`:
 | Full-run timing calibration | Passed | Job `8642244` at commit `4e53123087480a5d7da6cec08a83dc449d52b77e` completed 1,536/1,536 samples for six full-contract evaluation problems in 2 minutes 15 seconds. The raw shard was 2,262,955 bytes and peak host RSS was about 8.8 GiB. |
 | Full ReST-EM GSM8K/Qwen2.5-3B loop | Passed | M0 through M3 generation, correctness filtering, reset-to-M0 LoRA SFT, matched evaluation, and scoring completed at experiment commit `d2e8fd134afaad2754f3f2da6ad5b13c77a2f026`. M3 evaluation array job `8779606` and score job `8779607` completed with exit code `0:0`. |
 | Final matched M0–M3 report | Passed | The report covers all 1,319 GSM8K test problems with 256 samples per problem and paired bootstrap intervals. `summary.json` and `_SUCCESS.json` have the identical SHA-256 `00f1e2f14d2a2a75c833bbf973ebda29fb281574eed71aa23f9d95ce91af8223`. |
+| Fresh-seed M0/M1 confirmation | Passed to the planned stopping point | At commit `444c6e06026a5d23eb93a99bbfafcfee4dceef7b`, score jobs `8965028` and `8968584` evaluated the existing M0 and M1 checkpoints with the separate `restem_gsm8k_3b_eval_seed_20260806` sampling identity. The supplied logs report M0 `pass@1=0.6954`, M1 `pass@1=0.7284`, and identical `pass@256=0.9962` coverage of 1,314/1,319 problems. |
+| Project status | Concluded | The bounded ReST-EM reproduction, full primary M0–M3 diagnostic, and targeted M0/M1 sampling-seed confirmation provide the intended understanding of the method. Work ends here by choice; seed-2 M2/M3, 7B, and MATH runs are not claimed as completed. |
 
 The validated cluster artifact root is `/scratch/zha.j/rsi`, with data,
 artifacts, and checkpoints under its corresponding subdirectories. The completed
 full report is at
 `/scratch/zha.j/rsi/artifacts/restem_gsm8k_3b/report`. The single-seed
-GSM8K/Qwen2.5-3B run is complete; no additional cluster job is prescribed here.
-Future work will be selected in a separate discussion.
+GSM8K/Qwen2.5-3B run is complete, and the M0/M1 result was checked under one
+additional evaluation seed. The project was intentionally concluded on
+2026-08-06; no additional cluster job is prescribed. The local checkout was
+renamed from `RSI` to `ReST-EM`; the cluster artifact paths remain unchanged.
 
 Follow the recovery and validation instructions in
 [`docs/experiment_runbook.md`](docs/experiment_runbook.md).
@@ -141,6 +145,41 @@ capability. The conclusion is deliberately limited to this prompt, verifier,
 decoding distribution, 256-sample budget, dataset, model, and training seed;
 failure within 256 samples does not prove zero probability, and replication is
 required before treating small coverage differences as stable.
+
+### Fresh-seed confirmation and project closure
+
+To test whether the extreme high-`k` difference between primary M0 and M1 was
+stable, the completed checkpoints were sampled again using the separate
+evaluation-only identity `restem_gsm8k_3b_eval_seed_20260806`. This was a fresh
+inference seed, not a second training seed. The supplied score-job logs record:
+
+| Evaluation | Score job | pass@1 | pass@256 | Solved at least once |
+| --- | ---: | ---: | ---: | ---: |
+| Seed-2 M0 | `8965028` | 69.54% | 99.62% | 1,314/1,319 |
+| Seed-2 M1 | `8968584` | 72.84% | 99.62% | 1,314/1,319 |
+
+The second seed reproduces the main M0-to-M1 effect: one-round ReST-EM raises
+single-sample accuracy by about 3.30 percentage points while adding no observed
+coverage at 256 samples. Unlike the primary seed, M0 and M1 have equal
+`pass@256` coverage in this replication. Therefore, the low-`k` reweighting
+effect is stable across these two evaluation seeds, while the original
+one-problem M0-only difference at `k = 256` should be treated as rare-tail
+sampling variation rather than a replicated contraction result.
+
+This confirmation was intentionally stopped after M1. It does not replicate the
+M2/M3 curves or constitute a second independent training run. The stronger
+primary conclusion remains bounded: this experiment shows more efficient
+sampling of already accessible correct behavior and no evidence of expanded
+sampled coverage; it does not establish that all post-training merely
+reweights, or that capability expansion is impossible under other models,
+datasets, objectives, or compute regimes.
+
+The project is closed at this point because its intended methodological goal has
+been met: the offline sample/filter/SFT loop works end to end, the full
+`pass@k` diagnostic distinguishes low-`k` elicitation from high-`k` coverage,
+and a fresh evaluation seed demonstrates which conclusion is stable. Proposed
+7B, MATH, additional-seed, STaR-rationalization, and agent-level RSI studies are
+future possibilities only, not unfinished results of this reproduction.
 
 ## What is and is not being reproduced
 
